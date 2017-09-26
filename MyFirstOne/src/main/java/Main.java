@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 
+
 class Main{
     public static void main(String[] args) throws IOException {
         String url = "https://rozetka.com.ua/ua/mobile-cases/c146229/filter/";
@@ -18,7 +19,10 @@ class Main{
         int maxim = 0;
         int maxtry;
         String inform = "";
-        for(int i = 1; i < 6; i++){
+        Document counter = Jsoup.connect("https://rozetka.com.ua/ua/mobile-cases/c146229/filter/").get();
+        Elements counts = counter.select("a[class*=paginator-catalog-l-link]");
+        int pages = Integer.parseInt(counts.last().text().trim());
+        for(int i = 1; i < pages; i++){
             Document doc = Jsoup.connect("https://rozetka.com.ua/ua/mobile-cases/c146229/filter/page=" +
                     Integer.toString(i)).get();
             Elements tiles = doc.select("div[class*=g-i-tile-i-title]");
@@ -31,8 +35,8 @@ class Main{
                     maxim = maxtry;
                     inform = "\n" + tile.text() + " " + parser;
                 }
-                System.out.print("\n" + tile.text() + " " + parser);
-                sb.append(tile.text() + " " + parser + "\n");
+                System.out.print(tile.text() + "\n" + parser + "\n");
+                sb.append(tile.text() + "\n" + parser + "\n");
             }
         }
         PrintWriter pw = new PrintWriter(new File("cases.csv"));
@@ -50,27 +54,58 @@ class Main{
         }
         int nu;
         int coms = 0;
+        String all_coms = "";
         for(nu = 1; nu < num + 1; nu++){
             String pg = url + "page=" + nu + "/";
             //System.out.print("\n" + pg);
-            coms += parse_reviews_page(pg);
+            String prp = parse_reviews_page(pg);
+            coms += Integer.parseInt(prp.substring(0, prp.indexOf(" ")));
+            String[] values = prp.split(" ");
+            int meh = 0;
+            for (String araba:
+                 values) {
+                if (meh != 0) {
+                    all_coms += araba + " ";
+                }
+                meh += 1;
+            }
+
+            //System.out.print(all_coms + "\n");
+
 
         }
         //System.out.print("\n" + coms + " reviews from " + url);
-        return coms + " reviews from " + url;
+        //System.out.print(coms + " reviews from " + url + " comments: " + all_coms);
+        return coms + " reviews from " + url + " comments:\n" + all_coms;
     }
 
 
-    private  static int parse_reviews_page(String url) throws IOException{
+    private static String parse_reviews_page(String url) throws IOException{
         Document sup = Jsoup.connect(url).get();
         Elements reviews = sup.select("article[class*=pp-review-i]");
         int coms = 0;
+        String com_star = "";
+        String com_texts = "";
+        String united = "";
         for(Element rev:reviews){
             Elements star = rev.select("span[class*=g-rating-stars-i]");
             Elements text = rev.select("div[class*=pp-review-text]");
+            if(!star.isEmpty()) {
+                Elements texts = text.select("div[class*=pp-review-text-i]");
+                com_star = star.attr("content");
+                com_texts = texts.first().text().trim();
+                united += com_star + " " + com_texts + "\n";
+
+            }
+            else{
+                Elements texts = text.select("div[class*=pp-review-text-i]");
+                com_texts = texts.first().text().trim();
+                united += "0" + " " + com_texts + "\n";
+            }
             coms += 1;
 
         }
-        return coms;
+        //System.out.print(united);
+        return(coms + " " + united);
     }
 }
